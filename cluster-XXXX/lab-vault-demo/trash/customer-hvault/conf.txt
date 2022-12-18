@@ -1,0 +1,56 @@
+vault operator init -key-shares=1 -key-threshold=1
+vault operator unseal
+vault login
+
+$ oc rsh hvault-0
+sh-4.4$ vault operator init -key-shares=1 -key-threshold=1
+Unseal Key 1: vyj+xrGP9NWOKSZzAeQBy/6a7UB+scSw5eX2bw3j2qo=
+
+Initial Root Token: hvs.r9H2lZ5SoEMgWLwZ94M7v41p
+
+occreatesecretgeneric unseal-key KEY=vyj+xrGP9NWOKSZzAeQBy/6a7UB+scSw5eX2bw3j2qo= | grep -v wide|mkkubeseal |oc apply -f -
+
+# Enable the engine
+vault secrets enable -description="vault OCP4" -path w6 -version=1 kv  
+
+# Write policy
+vault policy write w6 - << EOF
+path "w6/*" {
+  capabilities = ["create", "read", "update", "patch", "delete", "list"]
+}
+EOF
+
+vault policy write w6-ro - << EOF
+path "w6/*" {
+  capabilities = ["read"]
+}
+EOF
+
+# Create token
+$ vault token create -display-name=w6 -metadata=name=w6 -policy=w6
+Key                  Value
+---                  -----
+token                hvs.CAESIDFnCRYgwF-8rB11jRM1A4f03FW62LeuhZj7N2g9VzWdGh4KHGh2cy5MdmpGdkpEYzJuNkd2WWtQWk5CTjlYQjk
+token_accessor       k4xON5uMcc9mMkMlqUGK03ns
+token_duration       768h
+token_renewable      true
+token_policies       ["default" "w6"]
+identity_policies    []
+policies             ["default" "w6"]
+token_meta_name      w6
+
+
+$ vault token create -display-name=w6-ro -metadata=name=w6-ro -policy=w6-ro
+Key                  Value
+---                  -----
+token                hvs.CAESIOhlateNSUw1O_q1swDnHTvIpu-DmXXs2GLPEKVcqXZDGh4KHGh2cy5CRFVEQmpDcHlnSmJORERwM2U2SnI4VEw
+token_accessor       86wjaYgTd0qYVfz38Oe1hBg1
+token_duration       768h
+token_renewable      true
+token_policies       ["default" "w6-ro"]
+identity_policies    []
+policies             ["default" "w6-ro"]
+token_meta_name      w6-ro
+
+
+vault kv put w6/gha-test user=gha passwd=azerty

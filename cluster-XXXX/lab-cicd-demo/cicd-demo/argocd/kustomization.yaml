@@ -1,0 +1,12 @@
+resources:
+- 0.ns.yaml
+- 2.argocd.yaml
+- 3.rbac-dex.yaml
+- 3.rbac.yaml
+- 4.gt-rollout-rbac.yaml
+- 4.gt-rollout-sa.yaml
+- 5.gt-rollout-job.yaml
+- 6.tekton-rollout-job.yaml
+- 7.image-puller-rbac.yaml
+- 8.welcome-prepull-job.yaml
+- 9.welcome-app-argocdproject.yaml

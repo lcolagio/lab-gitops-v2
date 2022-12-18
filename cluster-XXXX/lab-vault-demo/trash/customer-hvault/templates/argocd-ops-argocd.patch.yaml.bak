@@ -1,0 +1,57 @@
+##   oc patch argocd/ops-argocd --type merge -p "$(cat argocd-ops-argocd.patch.yaml)"
+spec:
+  repo:
+    mountsatoken: true
+    volumes:
+      - configMap:
+          name: cmp-plugin
+        name: cmp-plugin
+      - name: custom-tools
+        emptyDir: {}
+    initContainers:
+      - name: download-tools
+        image: paas.docker.xxxx.extra.xxxx.fr/ubi8
+        env:
+          - name: AVP_VERSION
+            value: 1.13.0
+        command: [sh, -c]
+        args:
+          - >-
+            curl -L https://repositories.xxxx.extra.xxxx.fr/repository/raw-paas/argocd/argocd-vault-plugin_$(AVP_VERSION)_linux_amd64 -o /custom-tools/argocd-vault-plugin &&
+            chmod +x /custom-tools/argocd-vault-plugin
+        volumeMounts:
+          - mountPath: /custom-tools
+            name: custom-tools
+    sidecarContainers:
+      - name: avp
+        command: [/var/run/argocd/argocd-cmp-server]
+        image: paas.docker.xxxx.extra.xxxx.fr/ubi8
+        volumeMounts:
+          - mountPath: /var/run/argocd
+            name: var-files
+          - mountPath: /home/argocd/cmp-server/plugins
+            name: plugins
+          - mountPath: /tmp
+            name: tmp
+
+          # Register plugins into sidecar
+          - mountPath: /home/argocd/cmp-server/config/plugin.yaml
+            subPath: avp.yaml
+            name: cmp-plugin
+
+          # Important: Mount tools into $PATH
+          - name: custom-tools
+            subPath: argocd-vault-plugin
+            mountPath: /usr/local/bin/argocd-vault-plugin
+
+        env:
+          - name: VAULT_ADDR
+            value: http://hvault:8200
+          - name: VAULT_TOKEN
+            value: hvs.CAESIOhlateNSUw1O_q1swDnHTvIpu-DmXXs2GLPEKVcqXZDGh4KHGh2cy5CRFVEQmpDcHlnSmJORERwM2U2SnI4VEw
+          - name: AVP_KV_VERSION
+            value: "1"
+          - name: AVP_AUTH_TYPE
+            value: token
+          - name: AVP_TYPE
+            value: vault

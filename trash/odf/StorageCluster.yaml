@@ -1,0 +1,61 @@
+apiVersion: ocs.openshift.io/v1
+kind: StorageCluster
+metadata:
+  name: ocs-storagecluster
+  namespace: openshift-storage
+  ownerReferences:
+    - apiVersion: odf.openshift.io/v1alpha1
+      kind: StorageSystem
+      name: ocs-storagecluster-storagesystem
+      uid: d465934a-710a-4a44-8d7c-3a1f7ecd4f00
+  labels:
+    app.kubernetes.io/instance: lcl-1207-ocs-instance
+spec:
+  storageDeviceSets:
+    - config: {}
+      count: 1
+      dataPVCTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: '1'
+          storageClassName: localblock
+          volumeMode: Block
+      name: ocs-deviceset
+      placement: {}
+      replica: 3
+      resources: {}
+  encryption:
+    kms: {}
+  mirroring: {}
+  monDataDirHostPath: /var/lib/rook
+  resources:
+    noobaa-core:
+      limits:
+        cpu: 200m
+      requests:
+        cpu: 100m
+    noobaa-db:
+      limits:
+        cpu: 200m
+      requests:
+        cpu: 100m
+    noobaa-endpoint:
+      limits:
+        cpu: 200m
+      requests:
+        cpu: 100m
+  managedResources:
+    cephBlockPools: {}
+    cephCluster: {}
+    cephConfig: {}
+    cephDashboard: {}
+    cephFilesystems: {}
+    cephObjectStoreUsers: {}
+    cephObjectStores: {}
+  arbiter: {}
+  manageNodes: false
+  externalStorage: {}
+  version: 4.7.0

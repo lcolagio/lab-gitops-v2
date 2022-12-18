@@ -1,0 +1,3 @@
+resources:
+-  1-lab-sealed-secrets-app.yaml
+# - 1-lab-vault-demo.yaml

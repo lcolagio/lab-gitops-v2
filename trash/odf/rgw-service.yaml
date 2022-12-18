@@ -1,0 +1,27 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: rook-ceph-rgw-ocs-storagecluster-cephobjectstore
+  namespace: openshift-storage
+spec:
+  ipFamilies:
+    - IPv4
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8080
+    - name: https
+      protocol: TCP
+      port: 443
+      targetPort: 443
+  internalTrafficPolicy: Cluster
+  type: ClusterIP
+  ipFamilyPolicy: SingleStack
+  sessionAffinity: None
+  selector:
+    app: rook-ceph-rgw
+    ceph_daemon_id: ocs-storagecluster-cephobjectstore
+    rgw: ocs-storagecluster-cephobjectstore
+    rook_cluster: openshift-storage
+    rook_object_store: ocs-storagecluster-cephobjectstore

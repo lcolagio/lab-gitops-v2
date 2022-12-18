@@ -1,0 +1,94 @@
+##   oc patch argocd/ops-argocd --type merge -p "$(cat argocd-ops-argocd.patch.yaml)"
+spec:
+  repo:
+    # [ISSUE] https://github.com/redhat-developer/gitops-operator/issues/203
+    # [ISSUE] can't use k8s, must use AUTH_TYPE = token
+    mountsatoken: true
+    serviceaccount: argocd-vault-plugin
+    volumes:
+      - configMap:
+          name: cmp-plugin
+        name: cmp-plugin
+      - name: custom-tools
+        emptyDir: {}
+    initContainers:
+      - name: download-tools
+        image: paas.docker.xxxx.extra.xxxx.fr/ubi8
+        env:
+          - name: AVP_VERSION
+            value: 1.13.0
+        command: [sh, -c]
+        args:
+          - >-
+            curl -L https://repositories.xxxx.extra.xxxx.fr/repository/raw-paas/argocd/argocd-vault-plugin_$(AVP_VERSION)_linux_amd64 -o /custom-tools/argocd-vault-plugin &&
+            curl -L https://repositories.xxxx.extra.xxxx.fr/repository/raw-paas/argocd/yq -o /custom-tools/yq &&
+            curl -L https://repositories.xxxx.extra.xxxx.fr/repository/raw-paas/argocd/helm -o /custom-tools/helm &&
+            curl -L https://repositories.xxxx.extra.xxxx.fr/repository/raw-paas/argocd/kustomize -o /custom-tools/kustomize &&
+            chmod +x /custom-tools/{argocd-vault-plugin,helm,yq,kustomize}
+        volumeMounts:
+          - mountPath: /custom-tools
+            name: custom-tools
+    sidecarContainers:
+      - name: avp-dir
+        command: [/var/run/argocd/argocd-cmp-server]
+        image: paas.docker.xxxx.extra.xxxx.fr/ubi8
+        volumeMounts:
+          - mountPath: /var/run/argocd
+            name: var-files
+          - mountPath: /home/argocd/cmp-server/plugins
+            name: plugins
+          - mountPath: /tmp
+            name: tmp
+
+          # Register plugins into sidecar
+          - mountPath: /home/argocd/cmp-server/config/plugin.yaml
+            subPath: avp-dir.yaml
+            name: cmp-plugin
+
+          # Important: Mount tools into $PATH
+          - name: custom-tools
+            mountPath: /usr/local/bin
+      - name: avp-helm
+        command: [/var/run/argocd/argocd-cmp-server]
+        image: paas.docker.xxxx.extra.xxxx.fr/ubi8
+        volumeMounts:
+          - mountPath: /var/run/argocd
+            name: var-files
+          - mountPath: /home/argocd/cmp-server/plugins
+            name: plugins
+          - mountPath: /tmp
+            name: tmp
+
+          # Register plugins into sidecar
+          - mountPath: /home/argocd/cmp-server/config/plugin.yaml
+            subPath: avp-helm.yaml
+            name: cmp-plugin
+
+          # Important: Mount tools into $PATH
+          - name: custom-tools
+            mountPath: /usr/local/bin
+        env:
+          - name: HOME
+            value: /tmp
+      - name: avp-kustomize
+        command: [/var/run/argocd/argocd-cmp-server]
+        image: paas.docker.xxxx.extra.xxxx.fr/ubi8
+        volumeMounts:
+          - mountPath: /var/run/argocd
+            name: var-files
+          - mountPath: /home/argocd/cmp-server/plugins
+            name: plugins
+          - mountPath: /tmp
+            name: tmp
+
+          # Register plugins into sidecar
+          - mountPath: /home/argocd/cmp-server/config/plugin.yaml
+            subPath: avp-kustomize.yaml
+            name: cmp-plugin
+
+          # Important: Mount tools into $PATH
+          - name: custom-tools
+            mountPath: /usr/local/bin
+        env:
+          - name: HOME
+            value: /tmp

@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cmp-plugin
+data:
+  avp-dir.yaml: |
+    apiVersion: argoproj.io/v1alpha1
+    kind: ConfigManagementPlugin
+    metadata:
+      name: argocd-vault-plugin
+    spec:
+      allowConcurrency: true
+      discover:
+        find:
+          # Must return no error code and some output
+          command:
+            - sh
+            - -c
+            - "find . -name '*.yaml' | xargs -I {} grep \"<path\\|avp\\.kubernetes\\.io\" {} | grep ."
+      generate:
+        command:
+          - argocd-vault-plugin
+          - generate
+          - "."
+          - -s
+          - avp-config
+      lockRepo: false
+  avp-kustomize.yaml: |
+    ---
+    apiVersion: argoproj.io/v1alpha1
+    kind: ConfigManagementPlugin
+    metadata:
+      name: argocd-vault-plugin-kustomize
+    spec:
+      allowConcurrency: true
+      discover:
+        find:
+          command:
+            - find
+            - "."
+            - -name
+            - kustomization.yaml
+      generate:
+        command:
+          - sh
+          - "-c"
+          - "kustomize build . | argocd-vault-plugin generate - -s avp-config"
+      lockRepo: false
+  avp-helm.yaml: |
+    apiVersion: argoproj.io/v1alpha1
+    kind: ConfigManagementPlugin
+    metadata:
+      name: argocd-vault-plugin-helm
+    spec:
+      allowConcurrency: true
+      init:
+        command:
+          - helm
+          - dependency
+          - build
+      # WARN : helm chart's dependencies doesn't work
+      # https://github.com/argoproj-labs/argocd-vault-plugin/issues/393
+      discover:
+        find:
+          command:
+            - sh
+            - -c
+            - "find . -name Chart.yaml && find . -name values.yaml"
+      generate:
+        command:
+          - bash
+          - -c
+          - |
+            set -eo pipefail
+            [ -f .plugin-argocd-source-$ARGOCD_APP_NAME.yaml ] && {
+              yq -i ".helm.values" .plugin-argocd-source-$ARGOCD_APP_NAME.yaml
+              override="-f .plugin-argocd-source-$ARGOCD_APP_NAME.yaml"
+            }
+            helm template $ARGOCD_APP_NAME -n $ARGOCD_APP_NAMESPACE $override $ARGOCD_ENV_HELM_ARGS --include-crds . | argocd-vault-plugin generate - -s avp-config
+      lockRepo: false
+---

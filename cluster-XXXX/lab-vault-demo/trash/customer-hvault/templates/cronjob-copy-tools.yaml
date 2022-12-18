@@ -1,0 +1,42 @@
+## Job to copy argocd tools to nexus
+## helm & kustomize are used by argocd pluggins
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: copy-tools
+  namespace: w6-ops
+spec:
+  schedule:  20 1 * * *
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  suspend: true
+  jobTemplate:
+    metadata:
+      labels:
+        job: copy-tools
+    spec:
+      activeDeadlineSeconds: 300
+      backoffLimit: 0
+      template:
+        spec:
+          containers:
+          - name: upload2nexus
+            env:
+              - name: nexus_creds
+                valueFrom:
+                  secretKeyRef:
+                    name: nexus
+                    key: creds
+            image: openshift4/ose-cli
+            command:
+              - /bin/bash
+              - -c
+              - |
+                set -euo pipefail
+                pod=`oc get po -l app.kubernetes.io/name=ops-argocd-repo-server -o name -n argocd | sed 's|.*/||'`
+                for f in helm kustomize ; do
+                  oc cp argocd/$pod:/usr/local/bin/$f /tmp/$f
+                  curl -s -u $nexus_creds --upload-file /tmp/$f https://repositories.xxxx.extra.xxxx.fr/repository/raw-paas/argocd/$f
+                done
+          serviceAccount: w6-ops
+          restartPolicy: Never

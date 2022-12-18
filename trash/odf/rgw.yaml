@@ -1,0 +1,81 @@
+apiVersion: ceph.rook.io/v1
+kind: CephObjectStore
+metadata:
+  name: ocs-storagecluster-cephobjectstore
+  namespace: openshift-storage
+spec:
+  dataPool:
+    erasureCoded:
+      codingChunks: 0
+      dataChunks: 0
+    failureDomain: rack
+    mirroring: {}
+    quotas: {}
+    replicated:
+      replicasPerFailureDomain: 1
+      size: 3
+      targetSizeRatio: 0.49
+    statusCheck:
+      mirror: {}
+  gateway:
+    instances: 1
+    placement:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: cluster.ocs.openshift.io/openshift-storage
+                  operator: Exists
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - rook-ceph-rgw
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                    - rook-ceph-rgw
+            topologyKey: kubernetes.io/hostname
+      tolerations:
+        - effect: NoSchedule
+          key: node.ocs.openshift.io/storage
+          operator: Equal
+          value: 'true'
+    port: 80
+    priorityClassName: openshift-user-critical
+    resources:
+      limits:
+        cpu: '2'
+        memory: 4Gi
+      requests:
+        cpu: '2'
+        memory: 4Gi
+    securePort: 443
+    service:
+      annotations:
+        service.beta.openshift.io/serving-cert-secret-name: ocs-storagecluster-cos-ceph-rgw-tls-cert
+  healthCheck:
+    bucket: {}
+  metadataPool:
+    erasureCoded:
+      codingChunks: 0
+      dataChunks: 0
+    failureDomain: rack
+    mirroring: {}
+    quotas: {}
+    replicated:
+      replicasPerFailureDomain: 1
+      size: 3
+    statusCheck:
+      mirror: {}
+  zone:
+    name: ''

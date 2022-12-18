@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: lab-vault-demo
+  namespace: openshift-gitops
+spec:
+  generators:
+  - git:
+      repoURL: https://github.com/lcolagio/lab-gitops-v2/
+      revision: master
+      directories:
+      - path: cluster-XXXX/lab-vault-demo/vault-demo/*
+  template:
+    metadata:
+      name: '{{path.basename}}'
+      labels:
+        appSet: vault-demo 
+    spec:
+      project: default
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        retry:
+          limit: 15
+          backoff:
+            duration: 15s
+            factor: 2
+            maxDuration: 5m
+      source:
+        repoURL: https://github.com/lcolagio/lab-gitops-v2/
+        targetRevision: master
+        path: '{{path}}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: openshift-gitops

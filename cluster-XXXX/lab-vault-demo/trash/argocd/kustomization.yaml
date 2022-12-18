@@ -1,0 +1,6 @@
+resources:
+- 0.ns.yaml
+- 2.argocd.yaml
+- 3.rbac-dex.yaml
+- 3.rbac.yaml
+- 9.welcome-app-argocdproject.yaml
